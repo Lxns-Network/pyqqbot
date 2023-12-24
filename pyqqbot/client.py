@@ -93,8 +93,10 @@ class QQBot(QQBotProtocol):
         await self._ws.send_json(load.dict())
 
     async def _heartbeat(self):
-        while not self._session.closed:
-            await self._ws.send_json(Load(op=OpCode.Heartbeat, d=self._s).dict())
+        while True:
+            if not self._session.closed:
+                await self._ws.send_json(Load(op=OpCode.Heartbeat, d=self._s).dict())
+            
             await asyncio.sleep(self._heartbeat_interval)
 
     async def access_token_refresh_loop(self):

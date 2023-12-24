@@ -25,3 +25,7 @@ class ForumRemoveThread(ForumOperationEvent):
 
 class ForumCreateReply(ForumOperationEvent):
     pass
+
+
+class ForumRemoveReply(ForumOperationEvent):
+    pass
