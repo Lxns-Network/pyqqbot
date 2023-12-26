@@ -1,8 +1,8 @@
 from pydantic import BaseModel, validator
 from typing import List, Union, Optional, Any
 
-from pyqqbot.entities.components.parser import MessageParser
-from pyqqbot.entities.components import MessageComponent
+from ..entities.components.parser import MessageParser
+from ..entities.components import MessageComponent
 from .components import Attachment
 from .enums import *
 
