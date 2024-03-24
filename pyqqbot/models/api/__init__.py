@@ -11,8 +11,8 @@ class GetAppAccessTokenResponse(BaseModel):
 
 
 class SendMessageResponse(BaseModel):
-    group_code: str
-    msg: str
+    id: str
+    timestamp: str
 
 
 class UploadMediaFileResponse(BaseModel):
