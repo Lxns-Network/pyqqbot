@@ -11,14 +11,13 @@ from .event.enums import EventModel, EventBody, Event
 from .event.models import Ready
 from .entities.components.parser import MessageParser
 from .entities import MessageComponent
-from .protocol import QQBotProtocol, HttpClient, CosClient
+from .protocol import QQBotProtocol, HttpClient
 from .logger import Network, Session, Event as EventLogger
 from .misc import argument_signature
 
 
 class QQBot(QQBotProtocol):
     http: HttpClient
-    cos: CosClient
     event: Dict[
         str, List[Callable[[EventBody], Coroutine]]
     ] = {}
@@ -40,9 +39,6 @@ class QQBot(QQBotProtocol):
         self._s = 0
 
         self.queue = None
-
-    def init_cos_client(self, region: str, secret_id: str, secret_key: str, bucket: str):
-        self.cos = CosClient(region, secret_id, secret_key, bucket)
 
     def run(self, loop=None):
         loop = loop or asyncio.get_event_loop()
@@ -94,7 +90,7 @@ class QQBot(QQBotProtocol):
 
     async def _heartbeat(self):
         while True:
-            if not self._ws.closed:
+            if not self._session.closed:
                 await self._ws.send_json(Load(op=OpCode.Heartbeat, d=self._s).dict())
             
             await asyncio.sleep(self._heartbeat_interval)

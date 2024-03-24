@@ -2,68 +2,12 @@ from typing import Union, List
 
 import aiohttp
 import asyncio
+import base64
 import json
 
-from .aiocos import CosConfig
-from .aiocos import CosS3Client
 from .entities.components import MessageType
 from .entities import Attachment, DirectMessage, MessageComponent, MessageParser, GroupMessage
 from .models.api import *
-
-
-class CosClient:
-    bucket: str
-
-    def __init__(self, region: str, secret_id: str, secret_key: str, bucket: str):
-        """
-        初始化腾讯云对象存储客户端
-        :param region:
-        :param secret_id:
-        :param secret_key:
-        :param bucket:
-        """
-        config = CosConfig(
-            Region=region,
-            SecretId=secret_id,
-            SecretKey=secret_key
-        )
-
-        self.client = CosS3Client(config)
-        self.bucket = bucket
-
-    async def upload_file(self, body: bytes, key: str, delete_delay: int = 0) -> str:
-        """
-        上传文件到腾讯云对象存储，并返回文件的访问链接
-        :param body:
-        :param key:
-        :param delete_delay:
-        :return:
-        """
-        await self.client.put_object(
-            Bucket=self.bucket,
-            Body=body,
-            Key=key
-        )
-
-        if delete_delay > 0:
-            asyncio.create_task(self.delete_file(key, delete_delay))
-
-        return self.client._get_url(self.bucket, key)
-
-    async def delete_file(self, key: str, delay: int = 0) -> None:
-        """
-        删除腾讯云对象存储中的文件
-        :param key:
-        :param delay:
-        :return:
-        """
-        if delay > 0:
-            await asyncio.sleep(delay)
-
-        await self.client.delete_object(
-            Bucket=self.bucket,
-            Key=key
-        )
 
 
 class HttpClient:
@@ -98,7 +42,6 @@ class HttpClient:
 
 class QQBotProtocol:
     http: HttpClient
-    cos: CosClient
     app_id: int
     client_secret: str
 
@@ -217,11 +160,17 @@ class QQBotProtocol:
         :param srv_send_msg:
         :return:
         """
-        if url is None:
-            if attachment is None:
-                raise ValueError('url 和 attachment 不能同时为空')
+        data = {
+            'file_type': attachment.type.value,
+            'srv_send_msg': srv_send_msg,
+        }
 
-            url = await self.cos.upload_file(attachment.file, attachment.filename, delete_delay=60)
+        if url is not None:
+            data['url'] = url
+        elif attachment is not None:
+            data['file_data'] = base64.b64encode(attachment.file).decode()
+        else:
+            raise ValueError('url 和 attachment 不能同时为空')
 
         return await self._upload_media_file(f'/v2/users/{openid}/files', {
             'file_type': attachment.type.value,
@@ -239,14 +188,16 @@ class QQBotProtocol:
         :param srv_send_msg:
         :return:
         """
-        if url is None:
-            if attachment is None:
-                raise ValueError('url 和 attachment 不能同时为空')
-
-            url = await self.cos.upload_file(attachment.file, attachment.filename, delete_delay=60)
-
-        return await self._upload_media_file(f'/v2/groups/{group_openid}/files', {
+        data = {
             'file_type': attachment.type.value,
-            'url': url,
             'srv_send_msg': srv_send_msg,
-        })
+        }
+
+        if url is not None:
+            data['url'] = url
+        elif attachment is not None:
+            data['file_data'] = base64.b64encode(attachment.file).decode()
+        else:
+            raise ValueError('url 和 attachment 不能同时为空')
+
+        return await self._upload_media_file(f'/v2/groups/{group_openid}/files', data)
